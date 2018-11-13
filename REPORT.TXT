@@ -3,11 +3,11 @@ _______________________________________________________________________
 
 Team name:
 
-Name 1 (last, first):
-Student number 1:
+Name 1 (last, first):De Costa, Kalindu
+Student number 1:1001392619
 
-Name 2 (last, first):
-Student number 2:
+Name 2 (last, first):Manoharan, Janarthanan
+Student number 2:1001291657
 
 If applicable:
 Name 3 (last, first):
@@ -21,22 +21,22 @@ Questions:
 0) On the same computer, and with no other applications open:
 
    - Run vanilla version, compiled as per the compile script (no compiler
-     optimization) and list: Vanilla (no compiler opt) FPS = 
+     optimization) and list: Vanilla (no compiler opt) FPS = 4.3
      
    - Run your optimized code, compiled without compiler optimization
-     and list: Your Code (no compiler opt) FPS =
+     and list: Your Code (no compiler opt) FPS = 8.2
 
    - Run vanilla code compiled with flag -O3 for compiler optimization
-     and list: Vanilla (compiler optimized) FPS =
+     and list: Vanilla (compiler optimized) FPS =9.3
      
    - Run your optimized code, compiled with flag -O3
-     and list: Your Code (compiler optimized) FPS =
+     and list: Your Code (compiler optimized) FPS =11.9
      
      What is the ratio of your code (compiler optimized) to vanilla
      with no compiler optimization?
      
      Ratio = Vanilla(no compiler opt) FPS / Your code(compiler optimized) FPS
-           =
+           =4.3/11.9 = 0.3613
      
 a) Look at the profiler output for vanilla_imageRescale(). Identify the
    lines that you think are un-necessary bottlenecks (i.e. lines whose
