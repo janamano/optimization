@@ -130,7 +130,122 @@ void imageOutput(unsigned char *im, int sx, int sy, const char *name);
 
 unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int dest_x, int dest_y)
 {
- return(NULL);		// Comment out, and write your fast routine here!
+    register unsigned char R1,R2,R3,R4;		// Colours at the four neighbours
+    register unsigned char G1,G2,G3,G4;
+    register unsigned char B1,B2,B3,B4;
+
+    register unsigned char *reg_src = src;
+    register int reg_src_x = src_x;
+    register int reg_dest_x = dest_x;
+    register int reg_dest_y = dest_y;
+
+    register unsigned char *dst=(unsigned char *)calloc(reg_dest_x*reg_dest_y*3,sizeof(unsigned char));   // Allocate and clear destination image
+    if (!dst) return(NULL);					       // Unable to allocate image
+
+    // avoided division
+    
+    register double step_x=(double)(src_x-1) * pow((double)(reg_dest_x-1), -1);
+    register double step_y=(double)(src_y-1) * pow((double)(reg_dest_y-1), -1);
+    
+    // getPixel(reg_src,0,0,src_x,&R1,&G1,&B1);	// get N1 colours
+    // getPixel(reg_src,1,0,src_x,&R2,&G2,&B2);	// get N2 colours
+    // getPixel(reg_src,0,1,src_x,&R3,&G3,&B3);	// get N3 colours
+    // getPixel(reg_src,1,1,src_x,&R4,&G4,&B4);	// get N4 colours
+    *(&R1)=*(reg_src);
+    *(&G1)=*(reg_src+1);
+    *(&B1)=*(reg_src+2);
+    *(&R2)=*(reg_src+3);
+    *(&G2)=*(reg_src+4);
+    *(&B2)=*(reg_src+5);
+    *(&R3)=*(reg_src+(reg_src_x*3));
+    *(&G3)=*(reg_src+(reg_src_x*3)+1);
+    *(&B3)=*(reg_src+(reg_src_x*3)+2);
+    *(&R4)=*(reg_src+(1+reg_src_x)*3);
+    *(&G4)=*(reg_src+((1+reg_src_x)*3)+1);
+    *(&B4)=*(reg_src+((1+reg_src_x)*3)+2);
+
+    register int x=0,y=0;				// Coordinates on destination image
+    register double fx,fy;				// Corresponding coordinates on source image
+    register double dx,dy;				// Fractional component of source image coordinates
+    fy=y*step_y;
+    dy=fy-(int)fy;
+
+    register double RT1, GT1, BT1;			// Interpolated colours at T1 and T2
+    register double RT2, GT2, BT2;
+    for (x=0, y=0;y<reg_dest_y; x++)	{
+        
+        fx=x*step_x;
+        int ffx = int(fx);
+        int ffy = int(fy);
+        int cfx = ffx + 1;
+        int cfy = ffy + 1;
+        dx=fx-ffx;
+		// Loop over destination image
+        if(x >= dest_x){
+            x = 0; 
+            y++; 
+            fy=y*step_y;
+            
+            ffy = int(fy);
+            cfy = ffy+1;
+            dy=fy-ffy;
+
+            R1=R3;
+            G1=G3;
+            B1=B3;
+            R2=R4;
+            G2=G4;
+            B2=B4;
+
+            // getPixel(reg_src,floor(fx),ceil(fy),src_x,&R3,&G3,&B3);	// get N3 colours
+            // getPixel(reg_src,ceil(fx),ceil(fy),src_x,&R4,&G4,&B4);	// get N4 colours
+            
+            *(&R3)=*(reg_src+(ffx+(cfy*reg_src_x))*3);
+            *(&G3)=*(reg_src+((ffx+(cfy*reg_src_x))*3)+1);
+            *(&B3)=*(reg_src+((ffx+(cfy*reg_src_x))*3)+2);
+            *(&R4)=*(reg_src+(cfx+(cfy*reg_src_x))*3);
+            *(&G4)=*(reg_src+((cfx+(cfy*reg_src_x))*3)+1);
+            *(&B4)=*(reg_src+((cfx+(cfy*reg_src_x))*3)+2); 
+        }
+        
+        
+        R1=R2;
+        G1=G2;
+        B1=B2;
+        R3=R4;
+        G3=G4;
+        B3=B4;
+        // getPixel(reg_src,ceil(fx),floor(fy),src_x,&R2,&G2,&B2);	// get N2 colours
+        // getPixel(reg_src,ceil(fx),ceil(fy),src_x,&R4,&G4,&B4);	// get N4 colours
+
+        *(&R2)=*(reg_src+(cfx+(ffy*reg_src_x))*3);
+        *(&G2)=*(reg_src+((cfx+(ffy*reg_src_x))*3)+1);
+        *(&B2)=*(reg_src+((cfx+(ffy*reg_src_x))*3)+2);
+        *(&R4)=*(reg_src+(cfx+(cfy*reg_src_x))*3);
+        *(&G4)=*(reg_src+((cfx+(cfy*reg_src_x))*3)+1);
+        *(&B4)=*(reg_src+((cfx+(cfy*reg_src_x))*3)+2);
+        // Interpolate to get T1 and T2 colours
+        RT1=(dx*R2)+(1-dx)*R1;
+        GT1=(dx*G2)+(1-dx)*G1;
+        BT1=(dx*B2)+(1-dx)*B1;
+        RT2=(dx*R4)+(1-dx)*R3;
+        GT2=(dx*G4)+(1-dx)*G3;
+        BT2=(dx*B4)+(1-dx)*B3;
+
+        // register unsigned char R=(unsigned char)((dy*RT2)+((1-dy)*RT1));
+        // register unsigned char G=(unsigned char)((dy*GT2)+((1-dy)*GT1));
+        // register unsigned char B=(unsigned char)((dy*BT2)+((1-dy)*BT1));
+
+        // Store the final colour
+        // setPixel(dst,x,y,dest_x,(unsigned char)((dy*RT2)+((1-dy)*RT1)),(unsigned char)((dy*GT2)+((1-dy)*GT1)),(unsigned char)((dy*BT2)+((1-dy)*BT1)));
+
+        *(dst+(x+(y*reg_dest_x))*3)=(unsigned char)((dy*RT2)+((1-dy)*RT1));
+        *(dst+((x+(y*reg_dest_x))*3)+1)=(unsigned char)((dy*GT2)+((1-dy)*GT1));
+        *(dst+((x+(y*reg_dest_x))*3)+2)=(unsigned char)((dy*BT2)+((1-dy)*BT1));
+        
+    }
+ 
+    return(dst);
 }
 
 /*****************************************************
