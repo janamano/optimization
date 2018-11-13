@@ -130,23 +130,22 @@ void imageOutput(unsigned char *im, int sx, int sy, const char *name);
 
 unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int dest_x, int dest_y)
 {
+    // Initial RGB values for interpolation
     register unsigned char R1,R2,R3,R4,G1,G2,G3,G4,B1,B2,B3,B4;
 
+    // create register versions for faster access
     register unsigned char *reg_src = src;
     register int reg_src_x = src_x, reg_dest_x = dest_x, reg_dest_y = dest_y;
 
+    // allocate space for our newly rescaled image
     register unsigned char *dst=(unsigned char *)calloc(reg_dest_x*reg_dest_y*3,sizeof(unsigned char));   // Allocate and clear destination image
     if (!dst) return(NULL);					       // Unable to allocate image
 
-    // avoided division
-    
+    // avoid divisions
     register double step_x=(double)(src_x-1) * pow((double)(reg_dest_x-1), -1);
     register double step_y=(double)(src_y-1) * pow((double)(reg_dest_y-1), -1);
     
-    // getPixel(reg_src,0,0,src_x,&R1,&G1,&B1);	// get N1 colours
-    // getPixel(reg_src,1,0,src_x,&R2,&G2,&B2);	// get N2 colours
-    // getPixel(reg_src,0,1,src_x,&R3,&G3,&B3);	// get N3 colours
-    // getPixel(reg_src,1,1,src_x,&R4,&G4,&B4);	// get N4 colours
+    // generate initial RGB values
     R1=*(reg_src);
     G1=*(reg_src+1);
     B1=*(reg_src+2);
@@ -160,30 +159,34 @@ unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int d
     G4=*(reg_src + 4 + 3*reg_src_x);
     B4=*(reg_src + 5 + 3*reg_src_x);
 
-    register int x=0,y=0, ffy, ffx, cfy, cfx;				
+    // x,y variables used in for loops, ff(i) cf(i) represents floor and ceil values. avoid unnecessary computations
+    register int x = 0,y=0, ffy = 0, ffx = 0, cfy = 0, cfx = 0;			
     register double fx,fy, dx,dy;			
     fy=y*step_y;
     dy=fy-(int)fy;
 
     register double RT1, GT1, BT1, RT2, GT2, BT2;			
-    
+    register unsigned char R, G, B;			
     //register int index = 0;
     for (x=0, y=0;y<reg_dest_y; x++)	{
-        
+        // get new fx value
         fx=x*step_x;
+        // generate new floor and cieil values for x
         ffx = int(fx);
-        ffy = int(fy);
         cfx = ffx + 1;
-        cfy = ffy + 1;
+        // calculate the difference in actual vs floor
         dx=fx-ffx;
 		// Loop over destination image
         if(x >= dest_x){
+            // reset x, and advance y
             x = 0; 
             y++; 
+            // get new fy value
             fy=y*step_y;
-            
+            // generate new floor and ceil values for y
             ffy = int(fy);
             cfy = ffy+1;
+            // calculate new y diff
             dy=fy-ffy;
 
             R1=R3;
@@ -192,10 +195,8 @@ unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int d
             R2=R4;
             G2=G4;
             B2=B4;
-
-            // getPixel(reg_src,floor(fx),ceil(fy),src_x,&R3,&G3,&B3);	// get N3 colours
-            // getPixel(reg_src,ceil(fx),ceil(fy),src_x,&R4,&G4,&B4);	// get N4 colours
             
+            // if necessary generate new RGB values by shifting points instead of generating all new values, move down
             R3=*(reg_src+(ffx+(cfy*reg_src_x))*3);
             G3=*(reg_src+((ffx+(cfy*reg_src_x))*3)+1);
             B3=*(reg_src+((ffx+(cfy*reg_src_x))*3)+2);
@@ -204,22 +205,21 @@ unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int d
             B4=*(reg_src+((cfx+(cfy*reg_src_x))*3)+2); 
         }
         
-        
         R1=R2;
         G1=G2;
         B1=B2;
         R3=R4;
         G3=G4;
         B3=B4;
-        // getPixel(reg_src,ceil(fx),floor(fy),src_x,&R2,&G2,&B2);	// get N2 colours
-        // getPixel(reg_src,ceil(fx),ceil(fy),src_x,&R4,&G4,&B4);	// get N4 colours
 
+        // if necessary generate new RGB values by shifting points instead of generating all new values, move right
         R2=*(reg_src+(cfx+(ffy*reg_src_x))*3);
         G2=*(reg_src+((cfx+(ffy*reg_src_x))*3)+1);
         B2=*(reg_src+((cfx+(ffy*reg_src_x))*3)+2);
         R4=*(reg_src+(cfx+(cfy*reg_src_x))*3);
         G4=*(reg_src+((cfx+(cfy*reg_src_x))*3)+1);
         B4=*(reg_src+((cfx+(cfy*reg_src_x))*3)+2);
+
         // Interpolate to get T1 and T2 colours
         RT1=(dx*R2)+(1-dx)*R1;
         GT1=(dx*G2)+(1-dx)*G1;
@@ -228,16 +228,13 @@ unsigned char *fast_rescaleImage(unsigned char *src, int src_x, int src_y, int d
         GT2=(dx*G4)+(1-dx)*G3;
         BT2=(dx*B4)+(1-dx)*B3;
 
-        // register unsigned char R=(unsigned char)((dy*RT2)+((1-dy)*RT1));
-        // register unsigned char G=(unsigned char)((dy*GT2)+((1-dy)*GT1));
-        // register unsigned char B=(unsigned char)((dy*BT2)+((1-dy)*BT1));
-
-        // Store the final colour
-        // setPixel(dst,x,y,dest_x,(unsigned char)((dy*RT2)+((1-dy)*RT1)),(unsigned char)((dy*GT2)+((1-dy)*GT1)),(unsigned char)((dy*BT2)+((1-dy)*BT1)));
-        //index = (x+(y*reg_dest_x))*3;
-        *(dst+3*x + 3*y*reg_dest_x)=(unsigned char)((dy*RT2)+((1-dy)*RT1));
-        *(dst+3*x + 3*y*reg_dest_x+1)=(unsigned char)((dy*GT2)+((1-dy)*GT1));
-        *(dst+3*x + 3*y*reg_dest_x+2)=(unsigned char)((dy*BT2)+((1-dy)*BT1));
+        R = (unsigned char)((dy*RT2)+((1-dy)*RT1));
+        G = (unsigned char)((dy*GT2)+((1-dy)*GT1));
+        B = (unsigned char)((dy*BT2)+((1-dy)*BT1));
+        
+        *(dst+3*x + 3*y*reg_dest_x) = R;
+        *(dst+3*x + 3*y*reg_dest_x+1) = G;
+        *(dst+3*x + 3*y*reg_dest_x+2) = B;
         
     }
  
